@@ -7,7 +7,7 @@ use std::{
 };
 use tokio::io::{AsyncRead, ReadBuf};
 
-pub fn cancelations<StateFn, FutureFn, St, R>(
+pub fn cancellations<StateFn, FutureFn, St, R>(
     initial_state: StateFn,
     future_factory: FutureFn,
 ) -> impl Iterator<Item = (usize, R)>
@@ -70,7 +70,7 @@ where
         let mut future = (self.future_factory)(&mut state);
         loop {
             if let Poll::Ready(result) = future.as_mut().poll(&mut cx) {
-                // Incresing stride for the next iteration
+                // Increasing stride for the next iteration
                 self.cancel_at_pending_idx = Some(cancel_at_pending_idx + 1);
                 return Some((cancel_at_pending_idx, result));
             }
@@ -184,7 +184,7 @@ mod tests {
             })
         }
 
-        for (_, result) in cancelations(init, read_exact_bytes) {
+        for (_, result) in cancellations(init, read_exact_bytes) {
             assert_eq!(result.unwrap(), input.as_bytes())
         }
     }
@@ -207,7 +207,7 @@ mod tests {
             Box::pin(async { r.read_until(b'\n', buf).await.map(|_| buf.clone()) })
         }
 
-        for (_, result) in cancelations(init, read_exact_bytes) {
+        for (_, result) in cancellations(init, read_exact_bytes) {
             assert_eq!(result.unwrap(), "1234\n".as_bytes())
         }
     }
@@ -217,7 +217,7 @@ mod tests {
         let input = "1234\n12345";
         let init = || BufReader::new(input.as_bytes().intersperse_pending()).lines();
 
-        for (_, result) in cancelations(init, |lines| Box::pin(lines.next_line())) {
+        for (_, result) in cancellations(init, |lines| Box::pin(lines.next_line())) {
             assert_eq!(result.unwrap().as_deref(), Some("1234"))
         }
     }
